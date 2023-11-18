@@ -18,11 +18,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -228,6 +232,86 @@ private fun DateAndYearPicker(
                 setCurrentDate = {
                     setDate(it)
                     listener.onDateSelected(it)
+                }
+            )
+        }
+
+        if(currentDateState == DatePickerMode.YEAR) {
+            Column(
+                modifier = Modifier
+                    .height(monthPickerHeight.value)
+            ) {
+                YearPicker(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(datePickerColor.backgroundColor),
+                    selectedDate = currentSelectedDate,
+                    startYear = property.startYear,
+                    datePickerTextStyle = dateTextStyle,
+                    endYear = property.endYear,
+                    offset = with(density) { -monthPickerHeight.value.toPx().toInt() / 4 }
+                ) { clickedYear ->
+                    setDateMode(DatePickerMode.MONTH)
+
+                    val newDate = Calendar.getInstance(locale).apply {
+                        set(Calendar.DAY_OF_MONTH, currentSelectedDate.get(Calendar.DAY_OF_MONTH))
+                        set(Calendar.MONTH, currentSelectedDate.get(Calendar.MONTH))
+                        set(Calendar.YEAR, clickedYear)
+                    }
+                    listener.onDateSelected(newDate)
+                    setDate(newDate)
+                }
+
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(datePickerColor.yearPickerSeparatorColor)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun YearPicker(
+    modifier: Modifier,
+    startYear: Int,
+    endYear: Int,
+    offset: Int,
+    datePickerTextStyle: DatePickerTextStyle,
+    selectedDate: Calendar,
+    onYearClick: (year: Int) -> Unit
+) {
+    val currentYear = selectedDate.get(Calendar.YEAR)
+    val startPosition = currentYear - startYear
+    val lazyState = rememberLazyListState(
+        initialFirstVisibleItemIndex = startPosition - 1,
+        initialFirstVisibleItemScrollOffset = offset
+    )
+
+    LazyColumn(
+        modifier = modifier,
+        state = lazyState
+    ) {
+        items(endYear - startYear) { index ->
+            val position = index + 1
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        indication = rememberRipple(),
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        onYearClick(startYear + position)
+                    }
+                    .padding(vertical = 16.dp),
+                text = "${startYear + position}",
+                textAlign = TextAlign.Center,
+                style = when(position) {
+                    startPosition -> datePickerTextStyle.yearPickerSelectedTextStyle
+                    else -> datePickerTextStyle.yearPickerUnselectedTextStyle
                 }
             )
         }
